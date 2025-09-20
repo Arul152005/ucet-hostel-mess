@@ -1,3 +1,5 @@
+
+
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -8,6 +10,8 @@ const authRoutes = require('./routes/auth');
 const staffRoutes = require('./routes/staff');
 const representativeRoutes = require('./routes/representatives');
 const dashboardRoutes = require('./routes/dashboard');
+const registrationRoutes = require('./routes/registration');
+const invoiceRoutes = require('./routes/invoice');
 
 // Load environment variables
 dotenv.config();
@@ -66,6 +70,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/representatives', representativeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/registration', registrationRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

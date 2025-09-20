@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../services/registration_service.dart';
 import 'payment_gateway_screen.dart';
+import '../debug/network_test_screen.dart';
 
 class HostelRegistrationScreen extends StatefulWidget {
   const HostelRegistrationScreen({super.key});
@@ -21,6 +23,8 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _courseController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _yearController = TextEditingController();
   final _parentNameController = TextEditingController();
   final _parentOccupationController = TextEditingController();
   final _parentAddressController = TextEditingController();
@@ -40,9 +44,10 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
   bool _declarationAccepted = false;
   bool _parentConsent = false;
   bool _obscurePassword = true;
-  String _academicYear = '2024-2025';
+  final String _academicYear = '2024-2025';
   
   final ImagePicker _picker = ImagePicker();
+  DateTime? _selectedDate;
 
   @override
   void dispose() {
@@ -50,6 +55,8 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _courseController.dispose();
+    _dobController.dispose();
+    _yearController.dispose();
     _parentNameController.dispose();
     _parentOccupationController.dispose();
     _parentAddressController.dispose();
@@ -74,6 +81,34 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
     if (image != null) {
       setState(() {
         _profileImage = File(image.path);
+      });
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime(2000),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.blue.shade600,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+        _dobController.text = '${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}';
       });
     }
   }
@@ -219,6 +254,56 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
     );
   }
 
+  Widget _buildDateOfBirthField() {
+    return Container(
+      margin: EdgeInsets.only(
+        bottom: MediaQuery.of(context).size.width > 600 ? 20 : 16,
+      ),
+      child: TextFormField(
+        controller: _dobController,
+        readOnly: true,
+        onTap: () => _selectDate(context),
+        decoration: InputDecoration(
+          labelText: 'Date of Birth',
+          hintText: 'Select your date of birth',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: MediaQuery.of(context).size.width > 600 ? 16 : 12,
+          ),
+          labelStyle: TextStyle(
+            fontSize: MediaQuery.of(context).size.width > 600 ? 16 : 14,
+          ),
+          suffixIcon: Icon(
+            Icons.calendar_today,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        style: TextStyle(
+          fontSize: MediaQuery.of(context).size.width > 600 ? 16 : 14,
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please select your date of birth';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
   Widget _buildGenderSelection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,6 +394,83 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
             padding: EdgeInsets.only(left: 12, top: 4),
             child: Text(
               'Please select category',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildYearSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Year of Study *',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('I Year'),
+                value: '1',
+                groupValue: _yearController.text,
+                onChanged: (value) {
+                  setState(() {
+                    _yearController.text = value!;
+                  });
+                },
+              ),
+            ),
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('II Year'),
+                value: '2',
+                groupValue: _yearController.text,
+                onChanged: (value) {
+                  setState(() {
+                    _yearController.text = value!;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('III Year'),
+                value: '3',
+                groupValue: _yearController.text,
+                onChanged: (value) {
+                  setState(() {
+                    _yearController.text = value!;
+                  });
+                },
+              ),
+            ),
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('IV Year'),
+                value: '4',
+                groupValue: _yearController.text,
+                onChanged: (value) {
+                  setState(() {
+                    _yearController.text = value!;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+        if (_yearController.text.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(left: 12, top: 4),
+            child: Text(
+              'Please select year of study',
               style: TextStyle(color: Colors.red, fontSize: 12),
             ),
           ),
@@ -524,7 +686,7 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
                     ),
                   ],
                 );
-              }).toList(),
+              }),
               const TableRow(
                 decoration: BoxDecoration(color: Colors.green),
                 children: [
@@ -622,39 +784,111 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
         );
         return;
       }
+      if (_yearController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select year of study')),
+        );
+        return;
+      }
 
-      // Prepare registration data
-      final registrationData = {
-        'name': _nameController.text,
-        'email': _emailController.text,
-        'password': _passwordController.text,
-        'course': _courseController.text,
-        'gender': _selectedGender,
-        'category': _selectedCategory,
-        'messPreference': _selectedMess,
-        'parentName': _parentNameController.text,
-        'parentOccupation': _parentOccupationController.text,
-        'parentAddress': _parentAddressController.text,
-        'parentPin': _parentPinController.text,
-        'parentContact': _parentContactController.text,
-        'guardianName': _guardianNameController.text,
-        'guardianOccupation': _guardianOccupationController.text,
-        'guardianAddress': _guardianAddressController.text,
-        'guardianPin': _guardianPinController.text,
-        'guardianContact': _guardianContactController.text,
-        'profileImagePath': _profileImage?.path,
-        'submittedAt': DateTime.now().toIso8601String(),
-      };
-
-      // Navigate to payment gateway
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PaymentGatewayScreen(
-            registrationData: registrationData,
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Submitting registration...'),
+            ],
           ),
         ),
       );
+
+      try {
+        // Submit initial registration to backend
+        final result = await RegistrationService.submitRegistration(
+          name: _nameController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+          dateOfBirth: _dobController.text,
+          course: _courseController.text,
+          year: _yearController.text,
+          gender: _selectedGender,
+          category: _selectedCategory,
+          messPreference: _selectedMess,
+          parentName: _parentNameController.text,
+          parentOccupation: _parentOccupationController.text,
+          parentAddress: _parentAddressController.text,
+          parentPin: _parentPinController.text,
+          parentContact: _parentContactController.text,
+          guardianName: _guardianNameController.text,
+          guardianOccupation: _guardianOccupationController.text,
+          guardianAddress: _guardianAddressController.text,
+          guardianPin: _guardianPinController.text,
+          guardianContact: _guardianContactController.text,
+          profileImagePath: _profileImage?.path,
+        );
+
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+
+        if (result['success']) {
+          // Prepare registration data for payment gateway
+          final registrationData = {
+            'name': _nameController.text,
+            'email': _emailController.text,
+            'password': _passwordController.text,
+            'dateOfBirth': _dobController.text,
+            'course': _courseController.text,
+            'year': _yearController.text,
+            'gender': _selectedGender,
+            'category': _selectedCategory,
+            'messPreference': _selectedMess,
+            'parentName': _parentNameController.text,
+            'parentOccupation': _parentOccupationController.text,
+            'parentAddress': _parentAddressController.text,
+            'parentPin': _parentPinController.text,
+            'parentContact': _parentContactController.text,
+            'guardianName': _guardianNameController.text,
+            'guardianOccupation': _guardianOccupationController.text,
+            'guardianAddress': _guardianAddressController.text,
+            'guardianPin': _guardianPinController.text,
+            'guardianContact': _guardianContactController.text,
+            'profileImagePath': _profileImage?.path,
+            'submittedAt': DateTime.now().toIso8601String(),
+          };
+
+          // Navigate to payment gateway
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentGatewayScreen(
+                registrationData: registrationData,
+              ),
+            ),
+          );
+        } else {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Registration failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -667,6 +901,21 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          // Debug button for network testing
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            tooltip: 'Network Test',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NetworkTestScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Form(
         key: _formKey,
@@ -767,6 +1016,7 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
                                 },
                               ),
                               _buildPasswordField(),
+                              _buildDateOfBirthField(),
                               _buildTextField(
                                 controller: _courseController,
                                 label: 'Course',
@@ -805,6 +1055,7 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
                           },
                         ),
                         _buildPasswordField(),
+                        _buildDateOfBirthField(),
                         _buildTextField(
                           controller: _courseController,
                           label: 'Course',
@@ -819,6 +1070,8 @@ class _HostelRegistrationScreenState extends State<HostelRegistrationScreen> {
               _buildGenderSelection(),
               const SizedBox(height: 16),
               _buildCategorySelection(),
+              const SizedBox(height: 16),
+              _buildYearSelection(),
 
               // Parent/Guardian Information
               _buildSectionTitle('2. Parent/Guardian Information'),

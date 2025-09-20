@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/registration_service.dart';
+import '../../services/invoice_service.dart';
+import 'invoice_screen.dart';
+import 'payment_success_screen.dart';
 
 class PaymentGatewayScreen extends StatefulWidget {
   final Map<String, dynamic> registrationData;
@@ -132,6 +135,7 @@ class _PaymentGatewayScreenState extends State<PaymentGatewayScreen> {
                     _buildInfoRow('Name', widget.registrationData['name'] ?? 'N/A'),
                     _buildInfoRow('Email', widget.registrationData['email'] ?? 'N/A'),
                     _buildInfoRow('Course', widget.registrationData['course'] ?? 'N/A'),
+                    _buildInfoRow('Year', widget.registrationData['year'] != null ? '${widget.registrationData['year']} Year' : 'N/A'),
                     _buildInfoRow('Gender', widget.registrationData['gender'] ?? 'N/A'),
                     _buildInfoRow('Category', widget.registrationData['category'] ?? 'N/A'),
                   ],
@@ -492,32 +496,41 @@ class _DeclarationDialogState extends State<DeclarationDialog> {
     });
 
     try {
-      // Submit complete registration with payment and declaration status
-      final result = await RegistrationService.submitCompleteRegistration(
-        registrationData: widget.registrationData,
-        paymentStatus: true,
-        declarationAccepted: _studentDeclaration,
-        parentConsent: _parentConsent,
+      // Complete payment and move data to permanent collection
+      final paymentResult = await RegistrationService.completePayment(
+        email: widget.registrationData['email'],
+        paymentId: 'PAY_${DateTime.now().millisecondsSinceEpoch}', // Simulated payment ID
+        transactionId: 'TXN_${DateTime.now().millisecondsSinceEpoch}', // Simulated transaction ID
+        paymentMethod: 'Simulated Payment Gateway',
+        amount: 46800.0,
       );
 
       if (mounted) {
         Navigator.pop(context); // Close declaration dialog
         Navigator.pop(context); // Close payment screen
-        Navigator.pop(context); // Go back to login screen
 
-        if (result['success']) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message']),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 5),
+        if (paymentResult['success']) {
+          // Navigate to success screen instead of showing snackbar
+          print('🎉 Payment successful! Navigating to success screen...');
+          print('📄 Payment result: ${paymentResult.toString()}');
+          
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentSuccessScreen(
+                registrationData: widget.registrationData,
+                paymentResult: paymentResult,
+              ),
             ),
           );
         } else {
+          // For failed payments, go back to login and show error
+          Navigator.pop(context); // Go back to login screen
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message']),
+              content: Text(paymentResult['message']),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
             ),
           );
         }
@@ -526,7 +539,7 @@ class _DeclarationDialogState extends State<DeclarationDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error submitting registration: ${e.toString()}'),
+            content: Text('Error completing registration: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -537,6 +550,41 @@ class _DeclarationDialogState extends State<DeclarationDialog> {
           _isSubmitting = false;
         });
       }
+    }
+  }
+
+  void _downloadInvoice(String invoiceId) async {
+    try {
+      // For now, just show the download URL
+      final downloadUrl = InvoiceService.getDownloadUrl(invoiceId);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Invoice download URL: $downloadUrl'),
+          backgroundColor: Colors.blue,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Copy URL',
+            textColor: Colors.white,
+            onPressed: () {
+              // In a real app, you would copy to clipboard here
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('URL copied to clipboard'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

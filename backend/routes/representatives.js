@@ -136,7 +136,7 @@ router.post('/nominate', authenticate, allStaffAccess, async (req, res) => {
 
     // Find the student
     const student = await User.findOne({
-      _id: studentId,
+      _id: registerNumber,
       role: User.STUDENT_ROLES.STUDENT,
       isActive: true
     });
@@ -191,7 +191,7 @@ router.post('/nominate', authenticate, allStaffAccess, async (req, res) => {
     };
 
     const representative = await User.findByIdAndUpdate(
-      studentId,
+      registerNumber,
       updateData,
       { new: true, runValidators: true }
     )
@@ -202,9 +202,9 @@ router.post('/nominate', authenticate, allStaffAccess, async (req, res) => {
     if (hostelId) {
       const hostelUpdate = {};
       if (representativeType === 'mess') {
-        hostelUpdate['representatives.messRep'] = studentId;
+        hostelUpdate['representatives.messRep'] = registerNumber;
       } else {
-        hostelUpdate['representatives.hostelRep'] = studentId;
+        hostelUpdate['representatives.hostelRep'] = registerNumber;
       }
       
       await Hostel.findByIdAndUpdate(hostelId, hostelUpdate);

@@ -108,7 +108,7 @@ async function getStudentDashboardData(user) {
   const data = {
     role: user.role,
     studentInfo: {
-      studentId: user.studentId,
+      registerNumber: user.registerNumber,
       course: user.course,
       year: user.year,
       department: user.department

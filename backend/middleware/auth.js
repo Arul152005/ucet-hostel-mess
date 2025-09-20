@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const BoysHostelUser = require('../models/BoysHostelUser');
+const GirlsHostelUser = require('../models/GirlsHostelUser');
 
 // Authentication middleware
 const authenticate = async (req, res, next) => {
@@ -24,12 +26,31 @@ const authenticate = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'hostel_management_secret');
     
-    const user = await User.findById(decoded.userId).select('-password');
+    let user = null;
+    let userType = null;
+
+    // First check the original User model (for staff)
+    user = await User.findById(decoded.userId).select('-password');
+    if (user) {
+      userType = 'staff';
+    } else {
+      // Check Boys Hostel Users
+      user = await BoysHostelUser.findById(decoded.userId).select('-password');
+      if (user) {
+        userType = 'boys_student';
+      } else {
+        // Check Girls Hostel Users
+        user = await GirlsHostelUser.findById(decoded.userId).select('-password');
+        if (user) {
+          userType = 'girls_student';
+        }
+      }
+    }
     
     if (!user) {
       return res.status(401).json({ 
         success: false, 
-        message: 'Invalid token. User not found.' 
+        message: 'Invalid token. User not found or registration not completed.' 
       });
     }
 
@@ -38,6 +59,16 @@ const authenticate = async (req, res, next) => {
         success: false, 
         message: 'Account is deactivated.' 
       });
+    }
+
+    // Add user type and collection info to the user object
+    user.userType = userType;
+    user.isStaff = userType === 'staff' ? user.isStaff : false;
+    user.isStudent = userType !== 'staff';
+    
+    // Add role if not present (for students)
+    if (userType !== 'staff' && !user.role) {
+      user.role = 'student';
     }
 
     req.user = user;

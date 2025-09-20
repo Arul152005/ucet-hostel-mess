@@ -1,6 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const BoysHostelUser = require('../models/BoysHostelUser');
+const GirlsHostelUser = require('../models/GirlsHostelUser');
 const { authenticate, selfOrStaffAccess } = require('../middleware/auth');
 
 const router = express.Router();
@@ -14,8 +16,9 @@ router.post('/register', async (req, res) => {
       email,
       password,
       phone,
+      dateOfBirth,
       role,
-      studentId,
+      registerNumber,
       employeeId,
       course,
       year,
@@ -44,14 +47,14 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check for duplicate student ID or employee ID
+    // Check for duplicate register number or employee ID
     if (role && Object.values(User.STUDENT_ROLES).includes(role)) {
-      if (studentId) {
-        const existingStudent = await User.findOne({ studentId });
+      if (registerNumber) {
+        const existingStudent = await User.findOne({ registerNumber });
         if (existingStudent) {
           return res.status(400).json({
             success: false,
-            message: 'Student with this ID already exists'
+            message: 'Student with this register number already exists'
           });
         }
       }
@@ -77,9 +80,14 @@ router.post('/register', async (req, res) => {
       role
     };
 
+    // Add dateOfBirth if provided
+    if (dateOfBirth) {
+      userData.dateOfBirth = new Date(dateOfBirth);
+    }
+
     // Add role-specific fields
     if (Object.values(User.STUDENT_ROLES).includes(role)) {
-      if (studentId) userData.studentId = studentId;
+      if (registerNumber) userData.registerNumber = registerNumber;
       if (course) userData.course = course;
       if (year) userData.year = year;
       if (department) userData.department = department;
@@ -130,7 +138,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login user
+// Login user (checks all collections: User, BoysHostelUser, GirlsHostelUser)
 router.post('/login', async (req, res) => {
   try {
     const { email, password, role } = req.body;
@@ -142,12 +150,34 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    let user = null;
+    let userType = null;
+    let hostelType = null;
+
+    // First, try to find user in the main User model (staff)
+    user = await User.findOne({ email });
+    if (user) {
+      userType = 'staff';
+    } else {
+      // Check Boys Hostel Users
+      user = await BoysHostelUser.findOne({ email });
+      if (user) {
+        userType = 'boys_student';
+        hostelType = 'Boys Hostel';
+      } else {
+        // Check Girls Hostel Users
+        user = await GirlsHostelUser.findOne({ email });
+        if (user) {
+          userType = 'girls_student';
+          hostelType = 'Girls Hostel';
+        }
+      }
+    }
+
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid credentials or registration not completed. Please complete payment first.'
       });
     }
 
@@ -170,21 +200,22 @@ router.post('/login', async (req, res) => {
 
     // Optional role validation for frontend role selection
     if (role) {
-      const isStaffRole = Object.values(User.STAFF_ROLES).includes(user.role);
-      const isStudentRole = Object.values(User.STUDENT_ROLES).includes(user.role);
-      
-      if (role === 'admin' && !isStaffRole) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid role for this account'
-        });
-      }
-      
-      if (role === 'student' && !isStudentRole) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid role for this account'
-        });
+      if (userType === 'staff') {
+        const isStaffRole = Object.values(User.STAFF_ROLES).includes(user.role);
+        if (role === 'admin' && !isStaffRole) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid role for this account'
+          });
+        }
+      } else {
+        // Student from hostel collections
+        if (role === 'admin') {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid role for this account. Students cannot access admin panel.'
+          });
+        }
       }
     }
 
@@ -193,13 +224,23 @@ router.post('/login', async (req, res) => {
     await user.save();
 
     // Generate JWT token
+    const tokenPayload = { 
+      userId: user._id, 
+      userType: userType,
+      isStaff: userType === 'staff' ? user.isStaff : false,
+      isStudent: userType !== 'staff'
+    };
+
+    if (userType === 'staff') {
+      tokenPayload.role = user.role;
+    } else {
+      tokenPayload.role = 'student';
+      tokenPayload.gender = user.gender;
+      tokenPayload.hostelType = hostelType;
+    }
+
     const token = jwt.sign(
-      { 
-        userId: user._id, 
-        role: user.role,
-        isStaff: user.isStaff,
-        isStudent: user.isStudent
-      },
+      tokenPayload,
       process.env.JWT_SECRET || 'hostel_management_secret',
       { expiresIn: '24h' }
     );
@@ -208,14 +249,32 @@ router.post('/login', async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
 
+    // Add additional info for response
+    userResponse.userType = userType;
+    userResponse.isStaff = userType === 'staff' ? user.isStaff : false;
+    userResponse.isStudent = userType !== 'staff';
+    
+    if (userType !== 'staff') {
+      userResponse.hostelType = hostelType;
+      userResponse.role = 'student';
+    }
+
+    const responseData = {
+      user: userResponse,
+      token,
+      userType,
+      hostelType
+    };
+
+    // Add permissions for staff users
+    if (userType === 'staff' && user.getPermissions) {
+      responseData.permissions = user.getPermissions();
+    }
+
     res.json({
       success: true,
-      message: 'Login successful',
-      data: {
-        user: userResponse,
-        token,
-        permissions: user.getPermissions()
-      }
+      message: `Login successful${hostelType ? ` - Welcome to ${hostelType}` : ''}`,
+      data: responseData
     });
 
   } catch (error) {
@@ -228,13 +287,24 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get current user profile
+// Get current user profile (checks all collections)
 router.get('/profile', authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .populate('assignedHostel', 'name code gender')
-      .populate('currentRoom', 'number floor type')
-      .select('-password');
+    let user = null;
+
+    // Find user in appropriate collection based on userType
+    if (req.user.userType === 'staff') {
+      user = await User.findById(req.user._id)
+        .populate('assignedHostel', 'name code gender')
+        .populate('currentRoom', 'number floor type')
+        .select('-password');
+    } else if (req.user.userType === 'boys_student') {
+      user = await BoysHostelUser.findById(req.user._id)
+        .select('-password');
+    } else if (req.user.userType === 'girls_student') {
+      user = await GirlsHostelUser.findById(req.user._id)
+        .select('-password');
+    }
 
     if (!user) {
       return res.status(404).json({
@@ -243,12 +313,23 @@ router.get('/profile', authenticate, async (req, res) => {
       });
     }
 
+    // Add user type info
+    user.userType = req.user.userType;
+    user.isStaff = req.user.isStaff;
+    user.isStudent = req.user.isStudent;
+
+    const responseData = {
+      user
+    };
+
+    // Add permissions for staff users
+    if (req.user.userType === 'staff' && user.getPermissions) {
+      responseData.permissions = user.getPermissions();
+    }
+
     res.json({
       success: true,
-      data: {
-        user,
-        permissions: user.getPermissions()
-      }
+      data: responseData
     });
 
   } catch (error) {
@@ -270,7 +351,7 @@ router.put('/profile/:userId', authenticate, selfOrStaffAccess, async (req, res)
     delete updateData.password;
     delete updateData.role;
     delete updateData.isActive;
-    delete updateData.studentId;
+    delete updateData.registerNumber;
     delete updateData.employeeId;
 
     const user = await User.findByIdAndUpdate(
@@ -311,7 +392,7 @@ router.put('/profile', authenticate, async (req, res) => {
     delete updateData.password;
     delete updateData.role;
     delete updateData.isActive;
-    delete updateData.studentId;
+    delete updateData.registerNumber;
     delete updateData.employeeId;
 
     const user = await User.findByIdAndUpdate(

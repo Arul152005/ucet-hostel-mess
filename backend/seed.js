@@ -280,7 +280,7 @@ const usersData = [
     password: 'student123',
     phone: '+91-9876543300',
     role: 'student',
-    studentId: 'STU24001',
+    // registerNumber: 'REG24001', // Optional field, not set during registration
     course: 'B.Tech Computer Science',
     year: 2,
     department: 'Computer Science',
@@ -297,7 +297,7 @@ const usersData = [
     password: 'student123',
     phone: '+91-9876543302',
     role: 'student',
-    studentId: 'STU24002',
+    // registerNumber: 'REG24002', // Optional field, not set during registration
     course: 'B.Tech Electronics',
     year: 3,
     department: 'Electronics',
@@ -314,7 +314,7 @@ const usersData = [
     password: 'student123',
     phone: '+91-9876543304',
     role: 'student',
-    studentId: 'STU24003',
+    // registerNumber: 'REG24003', // Optional field, not set during registration
     course: 'B.Tech Mechanical',
     year: 1,
     department: 'Mechanical',
@@ -331,7 +331,7 @@ const usersData = [
     password: 'student123',
     phone: '+91-9876543306',
     role: 'student',
-    studentId: 'STU24004',
+    // registerNumber: 'REG24004', // Optional field, not set during registration
     course: 'B.Tech Civil',
     year: 2,
     department: 'Civil',
@@ -350,7 +350,7 @@ const usersData = [
     password: 'student123',
     phone: '+91-9876543308',
     role: 'mess_representative',
-    studentId: 'STU24005',
+    // registerNumber: 'REG24005', // Optional field, not set during registration
     course: 'B.Tech Computer Science',
     year: 3,
     department: 'Computer Science',
@@ -373,7 +373,7 @@ const usersData = [
     password: 'student123',
     phone: '+91-9876543310',
     role: 'mess_representative',
-    studentId: 'STU24006',
+    // registerNumber: 'REG24006', // Optional field, not set during registration
     course: 'B.Tech Electronics',
     year: 4,
     department: 'Electronics',
@@ -398,7 +398,7 @@ const usersData = [
     password: 'student123',
     phone: '+91-9876543312',
     role: 'hostel_representative',
-    studentId: 'STU24007',
+    // registerNumber: 'REG24007', // Optional field, not set during registration
     course: 'B.Tech Mechanical',
     year: 3,
     department: 'Mechanical',
@@ -421,7 +421,7 @@ const usersData = [
     password: 'student123',
     phone: '+91-9876543314',
     role: 'hostel_representative',
-    studentId: 'STU24008',
+    // registerNumber: 'REG24008', // Optional field, not set during registration
     course: 'B.Tech Civil',
     year: 2,
     department: 'Civil',

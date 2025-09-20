@@ -139,6 +139,12 @@ const userSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  dateOfBirth: {
+    type: Date,
+    required: function() {
+      return this.role && Object.values(STUDENT_ROLES).includes(this.role);
+    }
+  },
   
   // Role and Status
   role: {
@@ -157,9 +163,9 @@ const userSchema = new mongoose.Schema({
   },
   
   // Student-specific fields
-  studentId: {
+  registerNumber: {
     type: String,
-    sparse: true, // Only required for students
+    sparse: true, // Optional field
     unique: true,
     trim: true
   },
@@ -175,6 +181,45 @@ const userSchema = new mongoose.Schema({
   department: {
     type: String,
     trim: true
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'transgender'],
+    lowercase: true
+  },
+  category: {
+    type: String,
+    enum: ['FC', 'BC', 'MBC', 'SC', 'ST']
+  },
+  messPreference: {
+    type: String,
+    enum: ['VEG', 'NON VEG']
+  },
+  registrationData: {
+    parentInfo: {
+      name: String,
+      occupation: String,
+      address: String,
+      pin: String,
+      contact: String
+    },
+    guardianInfo: {
+      name: String,
+      occupation: String,
+      address: String,
+      pin: String,
+      contact: String
+    },
+    submittedAt: Date,
+    paymentStatus: Boolean,
+    declarationAccepted: Boolean,
+    parentConsent: Boolean,
+    registrationCompletedAt: Date,
+    status: {
+      type: String,
+      enum: ['submitted', 'payment_pending', 'completed', 'approved', 'rejected'],
+      default: 'submitted'
+    }
   },
   parentContact: {
     name: { type: String, trim: true },
@@ -277,7 +322,7 @@ const userSchema = new mongoose.Schema({
 // Indexes for better performance
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
-userSchema.index({ studentId: 1 }, { sparse: true });
+userSchema.index({ registerNumber: 1 }, { sparse: true });
 userSchema.index({ employeeId: 1 }, { sparse: true });
 userSchema.index({ assignedHostel: 1 });
 
@@ -318,10 +363,7 @@ userSchema.pre('save', async function(next) {
 // Pre-save middleware to set ID based on role
 userSchema.pre('save', function(next) {
   if (this.isNew) {
-    if (this.isStudent && !this.studentId) {
-      // Generate student ID if not provided
-      this.studentId = generateStudentId();
-    } else if (this.isStaff && !this.employeeId) {
+    if (this.isStaff && !this.employeeId) {
       // Generate employee ID if not provided
       this.employeeId = generateEmployeeId();
     }
@@ -383,12 +425,6 @@ userSchema.statics.findRepresentatives = function() {
 };
 
 // Helper functions for ID generation
-function generateStudentId() {
-  const year = new Date().getFullYear().toString().slice(-2);
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  return `STU${year}${random}`;
-}
-
 function generateEmployeeId() {
   const year = new Date().getFullYear().toString().slice(-2);
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
